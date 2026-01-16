@@ -1,0 +1,52 @@
+services:
+  financial_api:
+    container_name: financial_api
+    build: .
+    ports:
+      - ${PORT}:3000
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      REFRESH_SECRET: ${REFRESH_SECRET}
+      REFRESH_EXPIRES_IN: ${REFRESH_EXPIRES_IN}
+      FRONTEND_URL: ${FRONTEND_URL}
+      DB_DIALECT: ${DB_DIALECT}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    depends_on:
+      financial_db:
+        condition: service_healthy
+    command: sh -c "npx sequelize-cli db:migrate && npm run start:prod"
+    networks:
+      - financial-network
+
+  financial_db:
+    container_name: financial_db
+    image: postgres:16-alpine
+    ports:
+      - ${DB_PORT}:5432
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - financial-network
+
+networks:
+  financial-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
